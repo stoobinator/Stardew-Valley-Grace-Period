@@ -1,39 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.Xna.Framework;
+﻿using System.Collections.Generic;
+using Netcode;
 using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewModdingAPI.Utilities;
 using StardewValley;
 using TerrainFeatures = StardewValley.TerrainFeatures;
 
-namespace SeasonSpillover
+namespace CropGracePeriod
 {
     /// <summary>
     /// Mod to allow crops planted in a previous season to survive into the next
+    /// Crops that regrow multiple times (e.g. beans) will allow one additional harvest before dying
     /// </summary>
     public class ModEntry : Mod
     {
-        #region Configuration
+        #region Fields
 
         /// <summary>
         /// Configuration for the mod
         /// </summary>
         private ModConfig Config;
-
-        /// <summary>
-        /// The seasons to allow a grace period
-        /// </summary>
-        private List<string> AllowedSeasons = new List<string>();
-
-        /// <summary>
-        /// The number of days to allow an already-planted crop to continue growing
-        /// </summary>
-        private int GracePeriod;
-
-        #endregion
-
-        #region Fields
 
         /// <summary>
         /// A list of crops that should be destroyed if harvested
@@ -44,13 +30,13 @@ namespace SeasonSpillover
 
         #region Entry point
 
-        /// <summary>The mod entry point, called after the mod is first loaded.</summary>
-        /// <param name="helper">Provides simplified APIs for writing mods.</param>
+        /// <summary>
+        /// The mod entry point, called after the mod is first loaded
+        /// </summary>
+        /// <param name="helper">Provides simplified APIs for writing mods</param>
         public override void Entry(IModHelper helper)
         {
             Config = helper.ReadConfig<ModConfig>();
-            AllowedSeasons = Config.GetAllowedSeasons();
-            GracePeriod = Config.GracePeriod;
 
             helper.Events.GameLoop.DayStarted += OnDayStarted;
             helper.Events.GameLoop.DayEnding += OnDayEnding;
@@ -59,7 +45,7 @@ namespace SeasonSpillover
 
         #endregion
 
-        #region Helpers
+        #region Events
 
         /// <summary>
         /// Tracks crops that might need to be cleaned up at day's end
@@ -69,24 +55,72 @@ namespace SeasonSpillover
         private void OnDayStarted(object sender, DayStartedEventArgs e)
         {
             GameLocation farm = Game1.getLocationFromName("Farm");
+            CropsToWatch = new List<Crop>();
 
-            if (AllowedSeasons.Contains(Game1.currentSeason))
+            foreach (var tile in farm.terrainFeatures)
             {
-                CropsToWatch = new List<Crop>();
-
-                foreach (var tile in farm.terrainFeatures)
+                foreach (TerrainFeatures.TerrainFeature feature in tile.Values)
                 {
-                    foreach (TerrainFeatures.TerrainFeature feature in tile.Values)
+                    if (feature is TerrainFeatures.HoeDirt dirt
+                        && IsSuspiciousCrop(dirt.crop))
                     {
-                        if (feature is TerrainFeatures.HoeDirt dirt
-                            && IsSuspiciousCrop(dirt.crop))
-                        {
-                            CropsToWatch.Add(dirt.crop);
-                        }
+                        CropsToWatch.Add(dirt.crop);
                     }
                 }
             }
         }
+
+        /// <summary>
+        /// Kill all crops not protected by this mod
+        /// </summary>
+        /// <param name="sender">The event sender</param>
+        /// <param name="e">The event data</param>
+        private void OnDayEnding(object sender, DayEndingEventArgs e)
+        {
+            GameLocation farm = Game1.getLocationFromName("Farm");
+            var date = SDate.Now().AddDays(1);
+
+            if (IsGracePeriodActive(date))
+            {
+                farm.IsGreenhouse = true;
+
+                // Manually kill all out of season crops not protected by the grace period
+                foreach (var tile in farm.terrainFeatures)
+                {
+                    foreach (TerrainFeatures.TerrainFeature feature in tile.Values)
+                    {
+                        if (feature is TerrainFeatures.HoeDirt dirt &&
+                            ShouldKillCrop(dirt.crop, date))
+                        {
+                            dirt.crop.Kill();
+                        }
+                    }
+                }
+
+                // Kill any out of season multi-harvest crops that were harvested 
+                foreach (Crop crop in CropsToWatch)
+                {
+                    if (crop.fullyGrown)
+                    {
+                        crop.Kill();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Turn off greenhouse effect
+        /// </summary>
+        /// <param name="sender">The event sender</param>
+        /// <param name="e">The event data</param>
+        private void OnSaving(object sender, SavingEventArgs e)
+        {
+            Game1.getLocationFromName("Farm").IsGreenhouse = false;
+        }
+
+        #endregion
+
+        #region Helpers
 
         /// <summary>
         /// Check if plant is an out of season, fully-grown crop that can be
@@ -106,50 +140,38 @@ namespace SeasonSpillover
         }
 
         /// <summary>
-        /// Kill all crops not protected by this mod
+        /// Checks if any grace period is currently active
         /// </summary>
-        /// <param name="sender">The event sender</param>
-        /// <param name="e">The event data</param>
-        private void OnDayEnding(object sender, DayEndingEventArgs e)
+        /// <param name="date">The current date</param>
+        /// <returns>True if a grace period is active, false otherwise</returns>
+        private bool IsGracePeriodActive(SDate date)
         {
-            GameLocation farm = Game1.getLocationFromName("Farm");
-            string season = SDate.Now().AddDays(1).Season;
+            int[] periods = { Config.Spring, Config.Summer, Config.Fall, Config.Winter };
 
-            if (AllowedSeasons.Contains(season))
+            for (int i = 0; i < 3; i++)
             {
-                farm.IsGreenhouse = true;
-
-                // Manually kill all out of season crops not protected by the grace period
-                foreach (var tile in farm.terrainFeatures)
+                int daysSinceSeasonEnded = date.Day + 28 * i;
+                if (daysSinceSeasonEnded >= date.DaysSinceStart)
                 {
-                    foreach (TerrainFeatures.TerrainFeature feature in tile.Values)
-                    {
-                        if (feature is TerrainFeatures.HoeDirt dirt &&
-                            ShouldKillCrop(dirt.crop, season))
-                        {
-                            dirt.crop.Kill();
-                        }
-                    }
+                    break;
                 }
 
-                // Kill any out of season multi-harvest crops that were harvested 
-                foreach (Crop crop in CropsToWatch)
+                SDate lastSeasonEnd = date.AddDays(-daysSinceSeasonEnded);
+                if (date <= lastSeasonEnd.AddDays(periods[lastSeasonEnd.SeasonIndex]))
                 {
-                    if (crop.fullyGrown)
-                    {
-                        crop.Kill();
-                    }
+                    return true;
                 }
             }
+            return false;
         }
 
         /// <summary>
         /// Check if a crop should be killed
         /// </summary>
-        /// <param name="crop"></param>
-        /// <param name="season"></param>
+        /// <param name="crop">The crop to check</param>
+        /// <param name="date">The current date</param>
         /// <returns>True if the crop should be killed, false otherwise</returns>
-        private bool ShouldKillCrop(Crop crop, string season)
+        private bool ShouldKillCrop(Crop crop, SDate date)
         {
             // Don't kill a non-existent crop
             if (crop == null)
@@ -157,54 +179,45 @@ namespace SeasonSpillover
                 return false;
             }
             // If it is currently the crop's season, don't kill it
-            else if (crop.seasonsToGrowIn.Contains(season))
+            else if (crop.seasonsToGrowIn.Contains(date.Season))
             {
                 return false;
             }
-            // If grace period is 3 or more seasons, it will never expire
-            else if (GracePeriod > 2)
+            // Check if crop is within a grace period 
+            else if (IsCropInGracePeriod(date, crop.seasonsToGrowIn))
             {
                 return false;
-            }
-            // If the crop is out of season and there's no grace period, kill it
-            else if (GracePeriod == 0)
-            {
-                return true;
-            }
-            // Check if crop is within the grace period 
-            else
-            {
-                for (int i = 1; i <= GracePeriod; i++)
-                {
-                    if (crop.seasonsToGrowIn.Contains(SubtractSeason(season, i)))
-                    {
-                        return false;
-                    }
-                }
             }
             return true;
         }
 
         /// <summary>
-        /// Determines the season a certain number before another season
+        /// Checks the previous three seasons to see if a crop is within any
+        /// of their grace periods
         /// </summary>
-        /// <param name="season">The season</param>
-        /// <param name="subtrahend">The number to subtract</param>
-        /// <returns>The calculated season</returns>
-        private string SubtractSeason(string season, int subtrahend)
+        /// <param name="date">The current date</param>
+        /// <param name="seasonsToGrowIn">The seasons a crop can grow in</param>
+        /// <returns></returns>
+        private bool IsCropInGracePeriod(SDate date, NetStringList seasonsToGrowIn)
         {
-            string[] seasons = { "spring", "summer", "fall", "winter" };
-            return seasons[(Array.IndexOf(seasons, season) - subtrahend + 4) % 4];
-        }
+            int[] periods = { Config.Spring, Config.Summer, Config.Fall, Config.Winter };
 
-        /// <summary>
-        /// Turn off greenhouse effect
-        /// </summary>
-        /// <param name="sender">The event sender</param>
-        /// <param name="e">The event data</param>
-        private void OnSaving(object sender, SavingEventArgs e)
-        {
-            Game1.getLocationFromName("Farm").IsGreenhouse = false;
+            for (int i = 0; i < 3; i++)
+            {
+                int daysSinceSeasonEnded = date.Day + 28 * i;
+                if (daysSinceSeasonEnded >= date.DaysSinceStart)
+                {
+                    break;
+                }
+
+                SDate lastSeasonEnd = date.AddDays(-daysSinceSeasonEnded);
+                if (date <= lastSeasonEnd.AddDays(periods[lastSeasonEnd.SeasonIndex])
+                    && seasonsToGrowIn.Contains(lastSeasonEnd.Season))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         #endregion
@@ -218,52 +231,21 @@ namespace SeasonSpillover
         /// <summary>
         /// Whether to protect crops in Spring
         /// </summary>
-        public bool Spring { get; set; } = true;
+        public int Spring { get; set; } = 28;
 
         /// <summary>
         /// Whether to protect crops in Summer
         /// </summary>
-        public bool Summer { get; set; } = true;
+        public int Summer { get; set; } = 28;
 
         /// <summary>
         /// Whether to protect crops in Fall
         /// </summary>
-        public bool Fall { get; set; } = true;
+        public int Fall { get; set; } = 0;
 
         /// <summary>
         /// Whether to protect crops in Winter
         /// </summary>
-        public bool Winter { get; set; } = false;
-
-        /// <summary>
-        /// The number of days to allow an already-planted crop to continue growing
-        /// </summary>
-        public int GracePeriod;
-
-        /// <summary>
-        /// Gets the list of seasons to protect previous seasons' crops
-        /// </summary>
-        /// <returns>List of allowed seasons</returns>
-        public List<string> GetAllowedSeasons()
-        {
-            var allowedSeasons = new List<string>();
-            if (Spring)
-            {
-                allowedSeasons.Add("spring");
-            }
-            if (Summer)
-            {
-                allowedSeasons.Add("summer");
-            }
-            if (Fall)
-            {
-                allowedSeasons.Add("fall");
-            }
-            if (Winter)
-            {
-                allowedSeasons.Add("winter");
-            }
-            return allowedSeasons;
-        }
+        public int Winter { get; set; } = 0;
     }
 }

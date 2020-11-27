@@ -1,0 +1,10 @@
+﻿{
+  "Name": "SeasonSpillover",
+  "Author": "stoobinator",
+  "Version": "1.0.0",
+  "Description": "Allows seeds planted in a previous season to grow to completion",
+  "UniqueID": "stoobinator.seasonspillover",
+  "EntryDll": "SeasonSpillover.dll",
+  "MinimumApiVersion": "3.0.0",
+  "UpdateKeys": []
+}

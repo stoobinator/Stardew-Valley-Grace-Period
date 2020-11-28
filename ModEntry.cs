@@ -139,6 +139,11 @@ namespace CropGracePeriod
             return false;
         }
 
+        /// <summary>
+        /// Check if a crop can be harvested
+        /// </summary>
+        /// <param name="crop">The crop to check</param>
+        /// <returns>True if the crop can be harvested, false otherwise</returns>
         private bool IsHarvestable(Crop crop)
         {
             return crop.currentPhase.Value >= crop.phaseDays.Count - 1 && (!crop.fullyGrown.Value || crop.dayOfCurrentPhase.Value <= 0);
@@ -234,22 +239,22 @@ namespace CropGracePeriod
     internal class ModConfig
     {
         /// <summary>
-        /// Whether to protect crops in Spring
+        /// How long to protect Spring crops after Spring ends
         /// </summary>
         public int Spring { get; set; } = 28;
 
         /// <summary>
-        /// Whether to protect crops in Summer
+        /// How long to protect Summer crops after Summer ends
         /// </summary>
         public int Summer { get; set; } = 28;
 
         /// <summary>
-        /// Whether to protect crops in Fall
+        /// How long to protect Fall crops after Fall ends
         /// </summary>
         public int Fall { get; set; } = 0;
 
         /// <summary>
-        /// Whether to protect crops in Winter
+        /// How long to protect Winter crops after Winter ends
         /// </summary>
         public int Winter { get; set; } = 0;
     }

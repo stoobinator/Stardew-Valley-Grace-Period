@@ -126,7 +126,8 @@ namespace CropGracePeriod
         /// Check if plant is an out of season, fully-grown crop that can be
         /// harvested multiple times, e.g. a bean plant in summer
         /// </summary>
-        /// <param name="dirt">A tile of dirt with a crop in it</param>
+        /// <param name="crop">The crop to check</param>
+        /// <returns>True if we should keep an eye on this crop, false otherwise</returns>
         private bool IsSuspiciousCrop(Crop crop)
         {
             if (crop != null
@@ -207,7 +208,7 @@ namespace CropGracePeriod
         /// </summary>
         /// <param name="date">The current date</param>
         /// <param name="seasonsToGrowIn">The seasons a crop can grow in</param>
-        /// <returns></returns>
+        /// <returns>True if the crop is within the grace period, false otherwise</returns>
         private bool IsCropInGracePeriod(SDate date, NetStringList seasonsToGrowIn)
         {
             int[] periods = { Config.Spring, Config.Summer, Config.Fall, Config.Winter };

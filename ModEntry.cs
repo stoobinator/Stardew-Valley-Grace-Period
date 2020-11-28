@@ -130,7 +130,7 @@ namespace CropGracePeriod
         private bool IsSuspiciousCrop(Crop crop)
         {
             if (crop != null
-                && crop.regrowAfterHarvest > -1
+                && crop.regrowAfterHarvest.Value > -1
                 && !crop.seasonsToGrowIn.Contains(Game1.currentSeason)
                 && IsHarvestable(crop))
             {
@@ -141,7 +141,7 @@ namespace CropGracePeriod
 
         private bool IsHarvestable(Crop crop)
         {
-            return crop.currentPhase >= crop.phaseDays.Count - 1 && (!crop.fullyGrown || crop.dayOfCurrentPhase <= 0);
+            return crop.currentPhase.Value >= crop.phaseDays.Count - 1 && (!crop.fullyGrown.Value || crop.dayOfCurrentPhase.Value <= 0);
         }
 
         /// <summary>

@@ -147,7 +147,8 @@ namespace CropGracePeriod
         /// <returns>True if the crop can be harvested, false otherwise</returns>
         private bool IsHarvestable(Crop crop)
         {
-            return crop.currentPhase.Value >= crop.phaseDays.Count - 1 && (!crop.fullyGrown.Value || crop.dayOfCurrentPhase.Value <= 0);
+            return crop.currentPhase.Value >= crop.phaseDays.Count - 1
+                && (!crop.fullyGrown.Value || crop.dayOfCurrentPhase.Value <= 0);
         }
 
         /// <summary>

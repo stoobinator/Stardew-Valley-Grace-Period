@@ -1,4 +1,4 @@
-# Stardew-Valley-Grace-Period
+# Crop Grace Period
 **Crop Grace Period** is a mod that allows a grace period for already-planted crops to grow into the next season. For example, you could allow Spring crops to grow until the 15th of Summer. I created it so my weekly Stardew Valley group wouldn't lose their crops if they couldn't make it a session or two in a row.
 
 ## Contents

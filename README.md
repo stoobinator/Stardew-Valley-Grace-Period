@@ -34,5 +34,5 @@ multiplayer mode, it must be installed by the main player to work correctly.
 This mod (including the Readme) owes a lot to Pathoschild's [Crops Anytime Anywhere](https://www.nexusmods.com/stardewvalley/mods/3000) mod!
 
 ## See also
-* [Release notes](release-notes.md)
+* [Release notes](Release Notes.md)
 * [Nexus mod](https://www.nexusmods.com/stardewvalley/mods/7203)

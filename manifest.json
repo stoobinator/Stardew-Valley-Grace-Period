@@ -1,10 +1,10 @@
 ﻿{
-  "Name": "SeasonSpillover",
+  "Name": "CropGracePeriod",
   "Author": "stoobinator",
   "Version": "1.0.0",
-  "Description": "Allows seeds planted in a previous season to grow to completion",
+  "Description": "Allows seeds planted in a previous season to grow into the next season",
   "UniqueID": "stoobinator.seasonspillover",
-  "EntryDll": "SeasonSpillover.dll",
+  "EntryDll": "CropGracePeriod.dll",
   "MinimumApiVersion": "3.0.0",
-  "UpdateKeys": []
+  "UpdateKeys": [ "Nexus:7203", "Github:stoobinator/Stardew-Valley-Grace-Period" ]
 }

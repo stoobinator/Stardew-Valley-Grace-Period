@@ -132,11 +132,16 @@ namespace CropGracePeriod
             if (crop != null
                 && crop.regrowAfterHarvest > -1
                 && !crop.seasonsToGrowIn.Contains(Game1.currentSeason)
-                && !crop.fullyGrown)
+                && IsHarvestable(crop))
             {
                 return true;
             }
             return false;
+        }
+
+        private bool IsHarvestable(Crop crop)
+        {
+            return crop.currentPhase >= crop.phaseDays.Count - 1 && (!crop.fullyGrown || crop.dayOfCurrentPhase <= 0);
         }
 
         /// <summary>

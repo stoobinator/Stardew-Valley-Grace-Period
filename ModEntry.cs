@@ -4,7 +4,7 @@ using StardewModdingAPI;
 using StardewModdingAPI.Events;
 using StardewModdingAPI.Utilities;
 using StardewValley;
-using TerrainFeatures = StardewValley.TerrainFeatures;
+using StardewValley.TerrainFeatures;
 
 namespace CropGracePeriod
 {
@@ -59,9 +59,9 @@ namespace CropGracePeriod
 
             foreach (var tile in farm.terrainFeatures)
             {
-                foreach (TerrainFeatures.TerrainFeature feature in tile.Values)
+                foreach (TerrainFeature feature in tile.Values)
                 {
-                    if (feature is TerrainFeatures.HoeDirt dirt
+                    if (feature is HoeDirt dirt
                         && IsSuspiciousCrop(dirt.crop))
                     {
                         CropsToWatch.Add(dirt.crop);
@@ -87,9 +87,9 @@ namespace CropGracePeriod
                 // Manually kill all out of season crops not protected by the grace period
                 foreach (var tile in farm.terrainFeatures)
                 {
-                    foreach (TerrainFeatures.TerrainFeature feature in tile.Values)
+                    foreach (TerrainFeature feature in tile.Values)
                     {
-                        if (feature is TerrainFeatures.HoeDirt dirt &&
+                        if (feature is HoeDirt dirt &&
                             ShouldKillCrop(dirt.crop, date))
                         {
                             dirt.crop.Kill();
@@ -116,6 +116,20 @@ namespace CropGracePeriod
         private void OnSaving(object sender, SavingEventArgs e)
         {
             Game1.getLocationFromName("Farm").IsGreenhouse = false;
+            GameLocation farm = Game1.getLocationFromName("Farm");
+            var date = SDate.Now().AddDays(1);
+
+            // Handle out-of-season fruit trees
+            foreach (TerrainFeature feature in farm.terrainFeatures.Values)
+            {
+                if (feature is FruitTree tree
+                    && Game1.currentSeason != tree.fruitSeason
+                    && !IsCropInGracePeriod(date, new NetStringList { tree.fruitSeason }))
+                {
+                    tree.GreenHouseTree = false;
+                    tree.seasonUpdate(false);
+                }
+            }
         }
 
         #endregion

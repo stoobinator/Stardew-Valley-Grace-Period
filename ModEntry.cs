@@ -26,6 +26,11 @@ namespace CropGracePeriod
         /// </summary>
         private List<Crop> CropsToWatch;
 
+        /// <summary>
+        /// A list of trees with three fruits on them
+        /// </summary>
+        private List<FruitTree> FullTrees;
+
         #endregion
 
         #region Entry point
@@ -48,7 +53,7 @@ namespace CropGracePeriod
         #region Events
 
         /// <summary>
-        /// Tracks crops that might need to be cleaned up at day's end
+        /// Tracks crops and trees that might need to be specially handled at day's end
         /// </summary>
         /// <param name="sender">The event sender</param>
         /// <param name="e">The event data</param>
@@ -56,6 +61,7 @@ namespace CropGracePeriod
         {
             GameLocation farm = Game1.getLocationFromName("Farm");
             CropsToWatch = new List<Crop>();
+            FullTrees = new List<FruitTree>();
 
             foreach (var tile in farm.terrainFeatures)
             {
@@ -65,6 +71,11 @@ namespace CropGracePeriod
                         && IsSuspiciousCrop(dirt.crop))
                     {
                         CropsToWatch.Add(dirt.crop);
+                    }
+                    else if (feature is FruitTree tree
+                        && tree.fruitsOnTree == 3)
+                    {
+                        FullTrees.Add(tree);
                     }
                 }
             }
@@ -126,6 +137,8 @@ namespace CropGracePeriod
                 if (feature is FruitTree tree
                     && Game1.currentSeason != tree.fruitSeason)
                 {
+                    tree.GreenHouseTree = false;
+
                     // Ignore burnt trees 
                     if (tree.struckByLightningCountdown.Value > 0)
                     {
@@ -135,11 +148,10 @@ namespace CropGracePeriod
                     else if (!IsCropInGracePeriod(date, new NetStringList { tree.fruitSeason })
                         || tree.fruitsOnTree.Value == 1)
                     {
-                        tree.GreenHouseTree = false;
                         tree.fruitsOnTree.Value = 0;
                     }
-                    // Allow fruits to stay on trees in grace period but subtract the fruit that just grew
-                    else if (tree.struckByLightningCountdown.Value == 0)
+                    // Allow fruits to stay on trees in grace period
+                    else if (!FullTrees.Contains(tree))
                     {
                         tree.fruitsOnTree.Value -= 1;
                     }

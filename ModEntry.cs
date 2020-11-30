@@ -115,9 +115,10 @@ namespace CropGracePeriod
         /// <param name="e">The event data</param>
         private void OnSaving(object sender, SavingEventArgs e)
         {
-            Game1.getLocationFromName("Farm").IsGreenhouse = false;
             GameLocation farm = Game1.getLocationFromName("Farm");
             var date = SDate.Now().AddDays(1);
+
+            farm.IsGreenhouse = false;
 
             // Handle out-of-season fruit trees
             foreach (TerrainFeature feature in farm.terrainFeatures.Values)

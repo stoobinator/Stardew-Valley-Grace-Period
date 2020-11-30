@@ -116,7 +116,7 @@ namespace CropGracePeriod
         private void OnSaving(object sender, SavingEventArgs e)
         {
             GameLocation farm = Game1.getLocationFromName("Farm");
-            var date = SDate.Now().AddDays(1);
+            var date = SDate.Now();
 
             farm.IsGreenhouse = false;
 
@@ -124,11 +124,25 @@ namespace CropGracePeriod
             foreach (TerrainFeature feature in farm.terrainFeatures.Values)
             {
                 if (feature is FruitTree tree
-                    && Game1.currentSeason != tree.fruitSeason
-                    && !IsCropInGracePeriod(date, new NetStringList { tree.fruitSeason }))
+                    && Game1.currentSeason != tree.fruitSeason)
                 {
-                    tree.GreenHouseTree = false;
-                    tree.seasonUpdate(false);
+                    // Ignore burnt trees 
+                    if (tree.struckByLightningCountdown.Value > 0)
+                    {
+                        continue;
+                    }
+                    // Clear out of season trees that are empty
+                    else if (!IsCropInGracePeriod(date, new NetStringList { tree.fruitSeason })
+                        || tree.fruitsOnTree.Value == 1)
+                    {
+                        tree.GreenHouseTree = false;
+                        tree.fruitsOnTree.Value = 0;
+                    }
+                    // Allow fruits to stay on trees in grace period but subtract the fruit that just grew
+                    else if (tree.struckByLightningCountdown.Value == 0)
+                    {
+                        tree.fruitsOnTree.Value -= 1;
+                    }
                 }
             }
         }
